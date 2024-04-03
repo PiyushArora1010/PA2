@@ -6,7 +6,9 @@ from sklearn import metrics
 from scipy.optimize import brentq
 from scipy.interpolate import interp1d
 from tqdm import tqdm
+from torchmetrics.audio import ScaleInvariantSignalNoiseRatio, ScaleInvariantSignalDistortionRatio
 import librosa
+import os
 
 def load_checkpoint(model, checkpoint):
     model = ECAPA_TDNN_SMALL(**model)
@@ -104,6 +106,44 @@ class punjabi(torch.utils.data.Dataset):
         
         return audio1[0], audio2[0], self.labels[idx]
 
+class librimix(torch.utils.data.Dataset):
+    def __init__(self, cropLen, datapath):
+        self.cropLen = cropLen
+        self.datapath = datapath
+        self.sr1 = []
+        self.sr2 = []
+        self.mix = []
+
+        mixfiles = datapath + '/mix_clean'
+        s1files = datapath + '/s1'
+        s2files = datapath + '/s2'
+
+        for file in os.listdir(mixfiles):
+            self.mix.append(mixfiles + '/' + file)
+            self.sr1.append(s1files + '/' + file)
+            self.sr2.append(s2files + '/' + file)
+
+    def __len__(self):
+        return len(self.mix)
+    
+    def __getitem__(self, idx):
+        mix, sr = torchaudio.load(self.mix[idx])
+        s1, sr = torchaudio.load(self.sr1[idx])
+        s2, sr = torchaudio.load(self.sr2[idx])
+
+        if mix.size(1) < self.cropLen:
+            mix = torch.nn.functional.pad(mix, (0, self.cropLen - mix.size(1)))
+        if s1.size(1) < self.cropLen:
+            s1 = torch.nn.functional.pad(s1, (0, self.cropLen - s1.size(1)))
+        if s2.size(1) < self.cropLen:
+            s2 = torch.nn.functional.pad(s2, (0, self.cropLen - s2.size(1)))
+
+        mix = mix[:,:self.cropLen]
+        s1 = s1[:,:self.cropLen]
+        s2 = s2[:,:self.cropLen]
+
+        return mix[0], s1[0], s2[0]
+
 def EER_data(model, data):
 
     model = model.eval()
@@ -129,3 +169,42 @@ def EER_data(model, data):
 
     return eer
 
+def SISNR_SISDR(model, data):
+    model = model.eval()
+    dataloader = torch.utils.data.DataLoader(data, batch_size=100, shuffle=False)
+    SISNR = ScaleInvariantSignalNoiseRatio().to('cuda')
+    SISDR = ScaleInvariantSignalDistortionRatio().to('cuda')
+
+    mean_SISNR_i = 0
+    mean_SISDR_i = 0
+
+    count = 0
+    for x in tqdm(dataloader):
+        mix = x[0].to('cuda')
+        mix = mix - mix.mean()
+        s1 = x[1].to('cuda')
+        s2 = x[2].to('cuda')
+
+        with torch.no_grad():
+            extractedAudios = model.separate_batch(mix)
+            audio1 = extractedAudios[:,:,0]
+            audio2 = extractedAudios[:,:,1]
+
+            SISNR_og = SISNR(audio1, mix) + SISNR(audio2, mix)
+            SISDR_og = SISDR(audio1, mix) + SISDR(audio2, mix)
+
+            SISNR_i = SISNR(audio1, s1) + SISNR(audio2, s2)
+            SISDR_i = SISDR(audio1, s1) + SISDR(audio2, s2)
+
+            SISNR_i = SISNR_og - SISNR_i
+            SISDR_i = SISDR_og - SISDR_i
+
+            SISNR_i = SISNR_i.mean().item()/2
+            SISDR_i = SISDR_i.mean().item()/2
+
+            count += 1
+
+            mean_SISNR_i = mean_SISNR_i + (SISNR_i - mean_SISNR_i)/count
+            mean_SISDR_i = mean_SISDR_i + (SISDR_i - mean_SISDR_i)/count
+
+    return mean_SISNR_i, mean_SISDR_i

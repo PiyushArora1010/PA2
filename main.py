@@ -1,5 +1,4 @@
 import torch
-
 import argparse
 import librosa
 import warnings
@@ -8,7 +7,9 @@ warnings.filterwarnings("ignore")
 
 from module.models import modelDic
 from module.utils import verification
-from utils import load_checkpoint, EER_data, vox, punjabi
+from utils import load_checkpoint, EER_data, SISNR_SISDR, vox, punjabi, librimix
+
+from speechbrain.pretrained import SepformerSeparation
 
 parser = argparse.ArgumentParser()
 
@@ -16,7 +17,7 @@ parser.add_argument('--model', type=str, default='wavlm_base_plus')
 parser.add_argument('--checkpoint', type=str, default='checkpoints/wavlm_base_plus_nofinetune.pth')
 parser.add_argument('--audio1', type=str, default='data/1.m4a')
 parser.add_argument('--audio2', type=str, default='data/2.m4a')
-parser.add_argument('--que', type=str, default="1.d")
+parser.add_argument('--que', type=str, default="2.b")
 
 args = parser.parse_args()
 
@@ -45,3 +46,18 @@ elif args.que == "1.d" or args.que == "1.e":
     print("Size of the dataset: {}".format(len(data)))
     eer = EER_data(model, data)
     print("EER: {:.4f}".format(eer))
+
+elif args.que == "2.b":
+    model = SepformerSeparation.from_hparams(
+    "speechbrain/sepformer-libri2mix",
+    run_opts={"device":"cuda"}
+    ).to("cuda")
+
+    data = librimix(1000, 'data/LibriMixData/test')
+
+    print("Size of the dataset: {}".format(len(data)))
+
+    sisnr, sisdr = SISNR_SISDR(model, data)
+
+    print("SISNRi: {:.4f}".format(sisnr))
+    print("SISDRi: {:.4f}".format(sisdr))
