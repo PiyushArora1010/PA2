@@ -33,7 +33,7 @@ if args.que == "1.b":
 elif args.que == "1.c":
     model = modelDic[args.model]
     model = load_checkpoint(model, args.checkpoint)
-    data = vox(16000, pathfile='data/veri_test.txt')
+    data = vox(16000, pathfile='data/wav/veri_test.txt')
     print("Size of the dataset: {}".format(len(data)))
     eer = EER_data(model, data)
     print("EER: {:.4f}".format(eer))
