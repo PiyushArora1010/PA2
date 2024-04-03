@@ -28,13 +28,7 @@ def load_model(filepath):
 
     return model, cfg, task
 
-def verification(model, wav1, wav2, use_gpu=True):
-
-    wav1, sr1 = librosa.load(wav1, sr=None)
-    wav2, sr2 = librosa.load(wav2, sr=None)
-
-    wav1 = torch.from_numpy(wav1).unsqueeze(0).float()
-    wav2 = torch.from_numpy(wav2).unsqueeze(0).float()
+def verification(model, wav1, wav2, sr1=16000, sr2=16000, use_gpu=True):
     resample1 = Resample(orig_freq=sr1, new_freq=16000)
     resample2 = Resample(orig_freq=sr2, new_freq=16000)
     wav1 = resample1(wav1)
@@ -51,6 +45,4 @@ def verification(model, wav1, wav2, use_gpu=True):
         emb2 = model(wav2)
 
     sim = F.cosine_similarity(emb1, emb2)
-    print("-------------------------")
-    print("The similarity score between two audios is {:.4f} (-1.0, 1.0).".format(sim[0].item()))
-    print("-------------------------")
+    return sim

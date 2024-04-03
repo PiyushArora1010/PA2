@@ -161,7 +161,7 @@ class AttentiveStatsPool(nn.Module):
 
 class ECAPA_TDNN(nn.Module):
     def __init__(self, feat_dim=80, channels=512, emb_dim=192, global_context_att=False,
-                 feat_type='fbank', sr=16000, feature_selection="hidden_states", update_extract=False, config_path=None):
+                 feat_type='fbank', sr=16000, feature_selection="hidden_states", update_extract=False):
         super().__init__()
 
         self.feat_type = feat_type
@@ -282,10 +282,15 @@ class ECAPA_TDNN(nn.Module):
 
         return out
 
+    def _features(self, x):
+        x = self.get_feat(x)
+        return x
 
-def ECAPA_TDNN_SMALL(feat_dim, emb_dim=256, feat_type='fbank', sr=16000, feature_selection="hidden_states", update_extract=False, config_path=None):
+
+
+def ECAPA_TDNN_SMALL(feat_dim, emb_dim=256, feat_type='fbank', sr=16000, feature_selection="hidden_states", update_extract=False):
     return ECAPA_TDNN(feat_dim=feat_dim, channels=512, emb_dim=emb_dim,
-                      feat_type=feat_type, sr=sr, feature_selection=feature_selection, update_extract=update_extract, config_path=config_path)
+                      feat_type=feat_type, sr=sr, feature_selection=feature_selection, update_extract=update_extract)
 
 
 modelDic = {
