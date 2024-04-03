@@ -103,7 +103,7 @@ class punjabi(torch.utils.data.Dataset):
         audio2 = audio2[:,:self.cropLength]
         
         return audio1[0], audio2[0], self.labels[idx]
-        
+
 def EER_data(model, data):
 
     model = model.eval()
@@ -128,3 +128,4 @@ def EER_data(model, data):
         eer = eer + (eer_ - eer)/count
 
     return eer
+

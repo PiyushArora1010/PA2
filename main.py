@@ -38,7 +38,7 @@ elif args.que == "1.c":
     eer = EER_data(model, data)
     print("EER: {:.4f}".format(eer))
 
-elif args.que == "1.d":
+elif args.que == "1.d" or args.que == "1.e":
     model = modelDic[args.model]
     model = load_checkpoint(model, args.checkpoint)
     data = punjabi(4000, pathfile='data/kathbath/punjabi_meta/test_known_data.txt')
