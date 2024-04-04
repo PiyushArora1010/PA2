@@ -15,26 +15,14 @@ parser = argparse.ArgumentParser()
 
 parser.add_argument('--model', type=str, default='wavlm_base_plus')
 parser.add_argument('--checkpoint', type=str, default='checkpoints/wavlm_base_plus_nofinetune.pth')
-parser.add_argument('--audio1', type=str, default='data/1.m4a')
-parser.add_argument('--audio2', type=str, default='data/2.m4a')
-parser.add_argument('--que', type=str, default="2.b")
+parser.add_argument('--que', type=str, default="2.c")
 
 args = parser.parse_args()
 
 if args.que == "1.b":
     model = modelDic[args.model]
     model = load_checkpoint(model, args.checkpoint)
-    audio1, sr1 = librosa.load(args.audio1)
-    audio2, sr2 = librosa.load(args.audio2)
-    audio1 = torch.tensor(audio1, dtype=torch.float32).unsqueeze(0)
-    audio2 = torch.tensor(audio2, dtype=torch.float32).unsqueeze(0)
-    sim = verification(model, audio1, audio2, sr1, sr2)
-    print("Similarity Score: {:.4f}".format(sim.item()))
-
-elif args.que == "1.c":
-    model = modelDic[args.model]
-    model = load_checkpoint(model, args.checkpoint)
-    data = vox(16000, pathfile='data/wav/veri_test.txt')
+    data = vox(4000, pathfile='data/wav/veri_test.txt')
     print("Size of the dataset: {}".format(len(data)))
     eer = EER_data(model, data)
     print("EER: {:.4f}".format(eer))
@@ -49,15 +37,36 @@ elif args.que == "1.d" or args.que == "1.e":
 
 elif args.que == "2.b":
     model = SepformerSeparation.from_hparams(
-    "speechbrain/sepformer-libri2mix",
+    source="speechbrain/sepformer-whamr", savedir='pretrained_models/sepformer-whamr',
     run_opts={"device":"cuda"}
     ).to("cuda")
 
     data = librimix(1000, 'data/LibriMixData/test')
 
-    print("Size of the dataset: {}".format(len(data)))
+    traindata, testdata = torch.utils.data.random_split(data, [int(len(data)*0.7), len(data)-int(len(data)*0.7)])
 
-    sisnr, sisdr = SISNR_SISDR(model, data)
+    print("Size of the Train dataset: {}".format(len(traindata)))
+    print("Size of the Test dataset: {}".format(len(testdata)))
+
+    sisnr, sisdr = SISNR_SISDR(model, testdata)
+
+    print("SISNRi: {:.4f}".format(sisnr))
+    print("SISDRi: {:.4f}".format(sisdr))
+
+elif args.que == "2.c":
+    model = SepformerSeparation.from_hparams(
+    source="pretrained_models/finetuned",
+    run_opts={"device":"cuda"}
+    ).to("cuda")
+
+    data = librimix(1000, 'data/LibriMixData/test')
+
+    traindata, testdata = torch.utils.data.random_split(data, [int(len(data)*0.7), len(data)-int(len(data)*0.7)])
+
+    print("Size of the Train dataset: {}".format(len(traindata)))
+    print("Size of the Test dataset: {}".format(len(testdata)))
+
+    sisnr, sisdr = SISNR_SISDR(model, testdata)
 
     print("SISNRi: {:.4f}".format(sisnr))
     print("SISDRi: {:.4f}".format(sisdr))
