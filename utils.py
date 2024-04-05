@@ -2,7 +2,8 @@ import torch
 import torchaudio
 from module.models import ECAPA_TDNN_SMALL
 from module.utils import verification
-from sklearn import metrics
+import numpy as np
+from sklearn.metrics import roc_curve
 from scipy.optimize import brentq
 from scipy.interpolate import interp1d
 from tqdm import tqdm
@@ -17,9 +18,11 @@ def load_checkpoint(model, checkpoint):
         model.load_state_dict(state_dict['model'], strict=False)
     return model
 
-def EER(preds, labels):
-    fpr, tpr, thresholds = metrics.roc_curve(labels, preds, pos_label=1)
-    eer = brentq(lambda x: 1. - x - interp1d(fpr, tpr)(x), 0., 1.)
+def EER(scores, labels):
+    scores = np.array(scores)
+    labels = np.array(labels)
+    fpr, tpr, thresholds = roc_curve(labels, scores, pos_label=1)
+    eer = brentq(lambda x : 1. - x - interp1d(fpr, tpr)(x), 0., 1.)
     return eer
 
 class vox(torch.utils.data.Dataset):
@@ -160,8 +163,6 @@ def EER_data(model, data):
         sim = verification(model, audio1, audio2)
         labels.extend(label)
         sim = (sim.cpu().numpy() + 1)/2
-        sim[sim>=0.5] = 1
-        sim[sim<0.5] = 0
         preds.extend(sim)
         eer_ = EER(preds, labels)
         count += 1

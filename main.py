@@ -51,7 +51,7 @@ elif args.que == "2.b":
     sisnr, sisdr = SISNR_SISDR(model, testdata)
 
     print("SISNRi: {:.4f}".format(sisnr))
-    print("SISDRi: {:.4f}".format(sisdr))
+    print("SDRi: {:.4f}".format(sisdr))
 
 elif args.que == "2.c":
     model = SepformerSeparation.from_hparams(
@@ -69,4 +69,4 @@ elif args.que == "2.c":
     sisnr, sisdr = SISNR_SISDR(model, testdata)
 
     print("SISNRi: {:.4f}".format(sisnr))
-    print("SISDRi: {:.4f}".format(sisdr))
+    print("SDRi: {:.4f}".format(sisdr))
